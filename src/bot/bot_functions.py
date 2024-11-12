@@ -1,16 +1,13 @@
 import telegram
 import datetime
-import zoneinfo
-import os
 
 # relative to 'main.py'
-import text_responses
-import bot_keyboards
-import session_functions
-import database_functions
-import button_manager
-
-from main import BOT_OPTIONS
+import bot.text_responses as text_responses
+import bot.bot_keyboards as bot_keyboards
+from utils.session import session_functions
+# import database_functions
+from utils.database.user.crud import user_repository
+import bot.button_manager as button_manager
 
 
 async def birthday_start(
@@ -28,41 +25,42 @@ async def birthday_start(
     and the job have begun.
     2. Running already - nothing has changed.
     """
-    target_chat = update.effective_message.chat_id
-    message = text_responses.sechude_active()
-    tz_offset = BOT_OPTIONS['time zone/offset']
-    time_instances = BOT_OPTIONS['time of instance(s) in hours']
-    tzinfo = zoneinfo.ZoneInfo(f'Etc/GMT{tz_offset}')
-    job_times = [
-        datetime.time(hour=x, tzinfo=tzinfo) for x in time_instances
-    ]
-    active_chats = os.listdir('databases/')
-
-    try:
-        open('databases/' + str(target_chat) + '.txt', 'r').close()
-    except FileNotFoundError:
-        open('databases/' + str(target_chat) + '.txt', 'w').close()
-
-    for chat_id in active_chats:
-        # guard: repeating jobs
-        current_jobs = context.job_queue.get_jobs_by_name(chat_id)
-        if current_jobs:
-            message = text_responses.sechude_active_already()
-            continue
-
-        for time in job_times:
-            context.job_queue.run_daily(
-                # what job to run
-                callback=birthday_tell,
-                time=time,
-                chat_id=target_chat,
-                name=chat_id,
-            )
-
-    await context.bot.send_message(
-        chat_id=target_chat,
-        text=message,
-    )
+    pass
+    # target_chat = update.effective_message.chat_id
+    # message = text_responses.sechude_active()
+    # tz_offset = BOT_OPTIONS['time zone/offset']
+    # time_instances = BOT_OPTIONS['time of instance(s) in hours']
+    # tzinfo = zoneinfo.ZoneInfo(f'Etc/GMT{tz_offset}')
+    # job_times = [
+    #     datetime.time(hour=x, tzinfo=tzinfo) for x in time_instances
+    # ]
+    # # active_chats = os.listdir('databases/')
+    #
+    # try:
+    #     open('databases/' + str(target_chat) + '.txt', 'r').close()
+    # except FileNotFoundError:
+    #     open('databases/' + str(target_chat) + '.txt', 'w').close()
+    #
+    # for chat_id in active_chats:
+    #     # guard: repeating jobs
+    #     current_jobs = context.job_queue.get_jobs_by_name(chat_id)
+    #     if current_jobs:
+    #         message = text_responses.sechude_active_already()
+    #         continue
+    #
+    #     for time in job_times:
+    #         context.job_queue.run_daily(
+    #             # what job to run
+    #             callback=birthday_tell,
+    #             time=time,
+    #             chat_id=target_chat,
+    #             name=chat_id,
+    #         )
+    #
+    # await context.bot.send_message(
+    #     chat_id=target_chat,
+    #     text=message,
+    # )
 
 
 async def birthday_set(
@@ -86,7 +84,7 @@ async def birthday_set(
 
     session_functions.start(username)
 
-    birthday_date = database_functions.search_by_name(
+    birthday_date = user_repository.search_by_name(
         username, target_chat
     )
     if birthday_date:
@@ -115,7 +113,7 @@ async def birthday_tell(
     today = datetime.time.now()
     # '%d.%m' == 'DD.MM' == 'Day.Month', ex.: '31.12'
     today_day_and_month = today.strfdatetime.time('%d.%m')
-    birthday_people = database_functions.search_by_date(
+    birthday_people = user_repository.search_by_date(
         today_day_and_month, target_chat)
 
     if birthday_people:
@@ -144,12 +142,10 @@ async def birthday_remove(
     username = update.effective_user.username
     message = text_responses.remove_fail()
 
-    target_line = database_functions.search_by_name(
-        username, target_chat)
 
-    if target_line:
-        database_functions.remove(target_line, target_chat)
-        message = text_responses.remove_success()
+
+    user_repository.remove(username, target_chat)
+    message = text_responses.remove_success()
 
     await context.bot.send_message(
         chat_id=target_chat,
@@ -214,7 +210,7 @@ async def birthday_button(
         target_chat = update.effective_chat.id
         message = text_responses.write_success()
         keyboard = None
-        database_functions.write(username, target_chat)
+        user_repository.write(username, target_chat)
 
     elif data == button_manager.Control.abort()[1]:
         await query.delete_message()

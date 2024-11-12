@@ -1,9 +1,12 @@
 import telegram.ext as tl
-import os
-import dotenv
 import logging
 
-import bot_functions
+from bot import bot_functions
+from envparse import env
+from utils.database.engine import engine
+from utils.database.base import Base
+Base.metadata.create_all(engine)
+
 
 BOT_OPTIONS: dict = {
     'app language': 'RUS',
@@ -12,18 +15,14 @@ BOT_OPTIONS: dict = {
         8, 20,
     ),
 }
-
-# bot's key can now be accessed via 'getenv'
-dotenv.load_dotenv()
+env.read_envfile("../.env")
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.ERROR)
 
-
 if __name__ == '__main__':
-    bot = tl.ApplicationBuilder().token(os.getenv('TOKEN')).build()
-
+    bot = tl.ApplicationBuilder().token(env("TOKEN")).build()
     # tell the bot how it should react to certain things
     birthday_set_handler = tl.CommandHandler(
         'ya_rodilsa', bot_functions.birthday_set)
@@ -40,5 +39,5 @@ if __name__ == '__main__':
     bot.add_handler(birthday_set_handler)
     bot.add_handler(birthday_remove_handler)
     bot.add_handler(birthday_loop_handler)
-
+    print("Бот запущен!")
     bot.run_polling(poll_interval=2.0)
