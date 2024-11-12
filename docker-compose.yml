@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: birthday_bot
+    environment:
+      env_file: .env
+    networks:
+      - bot_network
+
+  birthday_bot_db:
+    image: postgres
+    container_name: birthday_bot_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bot_network
+
+volumes:
+  postgres_data:
+
+networks:
+  bot_network:

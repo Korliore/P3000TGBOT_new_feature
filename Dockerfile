@@ -1,9 +1,21 @@
-FROM python:3.12-slim-bookworm as base_layer
-RUN mkdir /app
-COPY /src /app
-RUN pip3 install -r /app/requirements.txt --no-cache-dir
+FROM python:3.12-slim-bullseye
 
-FROM base_layer AS top_layer
-COPY --from=base_layer /app /app
+ENV PYTHONUNBUFFERED 1
+
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    bash  && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-CMD ["python3", "main.py"]
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+WORKDIR /app/src
+
+
+
+CMD ["/bin/bash", "entrypoint.sh"]
